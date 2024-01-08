@@ -557,11 +557,12 @@ return(x)}), ~as.data.frame(t(unlist(.x))))
 results_df_g$llik <- results_df_g$npar <- NULL
 results_df_g$lmr_p_values <- lmr_p_values_g
 results_df_g$min_averages <- min_averages_g
-results_df_g
 
 #4.4 Restart the LCA code for the best model in order to extract the detail information
 LCAgene3class <- poLCA(formula_g, data = tcgadata, nclass = 3, maxiter = 10000, nrep=30, calc.se = TRUE)
 tcgadata$LCA3class <- LCAgene3class$predclass
+
+                            
 ########### 4. Adjust the 3 classification model from LCA by the weights derived from LCA4class ###################
 tcgadata$LCA3class <- as.factor(tcgadata$LCA3class)
 tcgadata$LCA3class <- factor(tcgadata$LCA3class, levels = sort(unique(tcgadata$LCA3class)))
@@ -636,7 +637,7 @@ for (comb_name in names(cox_results_4)) {
   cox_results_df_4[comb_name, ] <- c(C_Index = c_index, Robustness = robustness_score, P_Value = p_value)
 }
 
-#######################三、使用ggsurvplot绘制生存曲线###############################
+#######################use ggsurvplot to make K-M curv of the LCAg three class###############################
 
 # without weights(OS)
 fit_gene <- survfit(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata,robust = TRUE)
@@ -694,68 +695,7 @@ CI_upper6_2 <- round(S6_2$conf.int[,"upper .95"], 2)
 pval6_2 <- round(S6_2$coefficients[,"Pr(>|z|)"], 3)
 results6_2<- data.frame(HR=HR6_2, CI=paste(CI_lower6_2, CI_upper6_2, sep="-"), pval=pval6_2)
 
-
-tcgaclass1 <- tcgadata[tcgadata$LCA3class == 1,]
-tcgaclass2 <- tcgadata[tcgadata$LCA3class == 2,]
-tcgaclass3 <- tcgadata[tcgadata$LCA3class == 3,]
-
-c_t1 <- coxph(Surv(OS_time, OS_status) ~ OS_status, data = tcgaclass1)
-c_t2 <- coxph(Surv(OS_time, OS_status) ~ OS_status, data = tcgaclass2)
-c_t3 <- coxph(Surv(OS_time, OS_status) ~ OS_status, data = tcgaclass3)
-
-fit_DM_after <- survfit(Surv(Followup_time, DM_status) ~ PAM50, data = tcgadata,weights = weights_LCA4class)
-C5_2 <- coxph(Surv(Followup_time, DM_status) ~ PAM50, data = tcgadata,weights = weights_LCA4class)
-S5_2 <- summary(C5_2)
-df5_2 <- paste0(round(S5_2$conf.int,2)[,1],"(",round(S5_2$conf.int,2)[,3],"-",round(S5_2$conf.int,2)[,4],")")
-
-reference_tcga <- read.csv("reference_tcga.csv")
-tcgadata <- merge(tcgadata, reference_tcga, by = "Seq")
-tcgadata$LCA3class <- factor(tcgadata$LCA3class, levels = sort(unique(tcgadata$LCA3class)))
-tcgadata$Race <- as.factor(tcgadata$Race)
-tcgadata$Age_class <- as.factor(tcgadata$Age_class)
-tcgadata$Stage <- as.factor(tcgadata$Stage)
-tcgadata$LCA3class <- as.integer(tcgadata$LCA3class)
-tcgadata$Mode_of_therapy <- factor(tcgadata$Mode_of_therapy, levels = sort(unique(tcgadata$Mode_of_therapy)))
-
-# Forest plot
-forest_age <- data.frame(LCA3class = c(1, 2, 3), Age1 = c(0, 0, 0), Age2 = c(0, 0, 0), Age3 = c(0, 0, 0), Age4 = c(0, 0, 0))
-for (i in 1:3) {
-  forest_age$Age1[i] <- sum(tcgadata$LCA3class == i & tcgadata$Age_class == 1)
-  forest_age$Age2[i] <- sum(tcgadata$LCA3class == i & tcgadata$Age_class == 2)
-  forest_age$Age3[i] <- sum(tcgadata$LCA3class == i & tcgadata$Age_class == 3)
-  forest_age$Age4[i] <- sum(tcgadata$LCA3class == i & tcgadata$Age_class == 4)
-}
-
-forest_stage <- data.frame(LCA3class = c(1, 2, 3), Stage1 = c(0, 0, 0), Stage2 = c(0, 0, 0), Stage3 = c(0, 0, 0), Stage4 = c(0, 0, 0))
-for (i in 1:3) {
-  forest_stage$Stage1[i] <- sum(tcgadata$LCA3class == i & tcgadata$Stage == 1)
-  forest_stage$Stage2[i] <- sum(tcgadata$LCA3class == i & tcgadata$Stage == 2)
-  forest_stage$Stage3[i] <- sum(tcgadata$LCA3class == i & tcgadata$Stage == 3)
-  forest_stage$Stage4[i] <- sum(tcgadata$LCA3class == i & tcgadata$Stage == 4)
-}
-
-forest_Pathology <- data.frame(LCA3class = c(1, 2, 3), Pathology1 = c(0, 0, 0), Pathology2 = c(0, 0, 0), Pathology3 = c(0, 0, 0), Pathology4 = c(0, 0, 0), Pathology5 = c(0, 0, 0))
-for (i in 1:3) {
-  forest_Pathology$Pathology1[i] <- sum(tcgadata$LCA3class == i & tcgadata$Pathology == 1)
-  forest_Pathology$Pathology2[i] <- sum(tcgadata$LCA3class == i & tcgadata$Pathology == 2)
-  forest_Pathology$Pathology3[i] <- sum(tcgadata$LCA3class == i & tcgadata$Pathology == 3)
-  forest_Pathology$Pathology4[i] <- sum(tcgadata$LCA3class == i & tcgadata$Pathology == 4)
-  forest_Pathology$Pathology5[i] <- sum(tcgadata$LCA3class == i & tcgadata$Pathology == 5)
-}
-
-forest_Race <- data.frame(LCA3class = c(1, 2, 3), Race1 = c(0, 0, 0), Race2 = c(0, 0, 0), Race3 = c(0, 0, 0), Race4 = c(0, 0, 0))
-for (i in 1:3) {
-  forest_Race$Race1[i] <- sum(tcgadata$LCA3class == i & tcgadata$Race == 1)
-  forest_Race$Race2[i] <- sum(tcgadata$LCA3class == i & tcgadata$Race == 2)
-  forest_Race$Race3[i] <- sum(tcgadata$LCA3class == i & tcgadata$Race == 3)
-  forest_Race$Race4[i] <- sum(tcgadata$LCA3class == i & tcgadata$Race == 4)
-}
-
-
-
-# count
-library(dplyr)
-
+#Clinical applicability
 count_MT <- tcgadata %>%
   group_by(Stage, LCA3class, Mode_of_therapy) %>%
   summarise(
@@ -767,9 +707,8 @@ count_MT <- tcgadata %>%
   ) %>%
   ungroup()
 
-
+#Impact of "Mode of Therapy"
 tcgadata$Mode_of_therapy <- relevel(tcgadata$Mode_of_therapy, ref = "0")
-
 tcga_cox_results <- data.frame(Stage=integer(), Age_class=integer(), LCA3class=integer(), RT0_count=integer(), RT1_count=integer(),TotalCount=integer(), HR=character(), CI=character(), pval=character())
 
 for(stage in unique(tcgadata$Stage)) {
@@ -795,12 +734,9 @@ for(stage in unique(tcgadata$Stage)) {
       tcga_cox_results <- rbind(tcga_cox_results, data.frame(Stage=stage, LCA3class=lca, M0=M0_count, M1=M1_count,M2=M2_count,M3=M3_count,M4=M4_count,TotalCount=TotalCount, HR=HR, CI=paste(CI_lower, CI_upper, sep="-"), pval=pval))
   }
 }
-
+#Impact of Radiation Therapy
 tcgadata$Radiation_Therapy <- factor(tcgadata$Radiation_Therapy, levels = sort(unique(tcgadata$Radiation_Therapy)))
-# tcgadata$Radiation_Therapy <- relevel(tcgadata$Radiation_Therapy, ref = "0")
-
 tcgaRT_cox_results <- data.frame(Stage=integer(),  LCA3class=integer(), RT0_count=integer(), RT1_count=integer(), HR=character(), CI=character(), pval=character())
-
 for(stage in unique(tcgadata$Stage)) {
   for(lca in unique(tcgadata$LCA3class)) {
     subset_data <- tcgadata[tcgadata$Stage == stage & tcgadata$LCA3class == lca, ]
@@ -820,14 +756,9 @@ for(stage in unique(tcgadata$Stage)) {
     tcgaRT_cox_results <- rbind(tcgaRT_cox_results, data.frame(Stage=stage, LCA3class=lca, RT0=RT0_count, RT1=RT1_count, HR=HR, CI=paste(CI_lower, CI_upper, sep="-"), pval=pval))
   }
 }
-
-
-
+#Impact of Pharmaceutical Therapy
 tcgadata$Pharmaceutical_Therapy <- factor(tcgadata$Pharmaceutical_Therapy, levels = sort(unique(tcgadata$Pharmaceutical_Therapy)))
-# tcgadata$Pharmaceutical_Therapy <- relevel(tcgadata$Pharmaceutical_Therapy, ref = "0")
-
 tcgaCH_cox_results <- data.frame(Stage=integer(),  LCA3class=integer(), CH0_count=integer(), CH1_count=integer(), HR=character(), CI=character(), pval=character())
-
 for(stage in unique(tcgadata$Stage)) {
   for(lca in unique(tcgadata$LCA3class)) {
     subset_data <- tcgadata[tcgadata$Stage == stage & tcgadata$LCA3class == lca, ]
@@ -844,6 +775,17 @@ for(stage in unique(tcgadata$Stage)) {
           cox_tengene[[paste("LCA3class", i, "Gene", j)]] <- cox_model
         }
       } 
+      HR <- round(summary_cox$conf.int[,"exp(coef)"], 2)
+      CI_lower <- round(summary_cox$conf.int[,"lower .95"], 2)
+      CI_upper <- round(summary_cox$conf.int[,"upper .95"], 2)
+      pval <- round(summary_cox$coefficients[,"Pr(>|z|)"], 3)
+    } else {
+      HR <- CI_lower <- CI_upper <- pval <- "—"
+    }
+    tcgaCH_cox_results <- rbind(tcgaCH_cox_results, data.frame(Stage=stage, LCA3class=lca, CH0=CH0_count, CH1=CH1_count, HR=HR, CI=paste(CI_lower, CI_upper, sep="-"), pval=pval))
+  }
+}
+
       forest_plot_data_tengene <- data.frame()
       for(model_name in names(cox_tengene)) {
         model <- cox_tengene[[model_name]]
@@ -861,71 +803,10 @@ for(stage in unique(tcgadata$Stage)) {
             p_value = pval
           ))
         }
-      }
-      
-    # LCA3class=1
-      ggplot(subset(forest_plot_data_tengene,class == 1), aes(x = HR, y = model1)) +
-        geom_point() +
-        geom_errorbarh(aes(xmin = pmax(lower_ci, 0.1), xmax = pmin(upper_ci, 10)), height = 0.3) +
-        geom_segment(data = subset(forest_plot_data_tengene, lower_ci < 0.1),
-                     aes(x = 0.1, xend = 0.099, y = model1, yend = model1),
-                     arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
-        geom_segment(data = subset(forest_plot_data_tengene, upper_ci > 10),
-                     aes(x = 10, xend = 11, y = model1, yend = model1),
-                     arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
-        scale_x_log10(limits = c(0.1, 10)) +
-        geom_vline(xintercept = 1, linetype = "dashed") +
-        theme_minimal() +
-        theme(panel.grid.major = element_blank(), 
-              panel.grid.minor = element_blank()) + 
-        xlab("Hazard Ratio (HR)") +
-        ylab("Model Identifier")      
-     #LCA3class=2
-      ggplot(subset(forest_plot_data_tengene,class == 2), aes(x = HR, y = model1)) +
-        geom_point() +
-        geom_errorbarh(aes(xmin = pmax(lower_ci, 0.1), xmax = pmin(upper_ci, 10)), height = 0.3) +
-        geom_segment(data = subset(forest_plot_data_tengene, lower_ci < 0.1),
-                     aes(x = 0.1, xend = 0.099, y = model1, yend = model1),
-                     arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
-        geom_segment(data = subset(forest_plot_data_tengene, upper_ci > 10),
-                     aes(x = 10, xend = 11, y = model1, yend = model1),
-                     arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
-        scale_x_log10(limits = c(0.1, 10)) +
-        geom_vline(xintercept = 1, linetype = "dashed") +
-        theme_minimal() +
-        theme(panel.grid.major = element_blank(), 
-              panel.grid.minor = element_blank()) + 
-        xlab("Hazard Ratio (HR)") +
-        ylab("Model Identifier")      
-      #LCA3class=3
-      ggplot(subset(forest_plot_data_tengene,class == 3), aes(x = HR, y = model1)) +
-        geom_point() +
-        geom_errorbarh(aes(xmin = pmax(lower_ci, 0.1), xmax = pmin(upper_ci, 10)), height = 0.3) +
-        geom_segment(data = subset(forest_plot_data_tengene, lower_ci < 0.1),
-                     aes(x = 0.1, xend = 0.099, y = model1, yend = model1),
-                     arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
-        geom_segment(data = subset(forest_plot_data_tengene, upper_ci > 10),
-                     aes(x = 10, xend = 11, y = model1, yend = model1),
-                     arrow = arrow(type = "closed", length = unit(0.1, "inches"))) +
-        scale_x_log10(limits = c(0.1, 10)) +
-        geom_vline(xintercept = 1, linetype = "dashed") +
-        theme_minimal() +
-        theme(panel.grid.major = element_blank(), 
-              panel.grid.minor = element_blank()) + 
-        xlab("Hazard Ratio (HR)") +
-        ylab("Model Identifier")      
-      HR <- round(summary_cox$conf.int[,"exp(coef)"], 2)
-      CI_lower <- round(summary_cox$conf.int[,"lower .95"], 2)
-      CI_upper <- round(summary_cox$conf.int[,"upper .95"], 2)
-      pval <- round(summary_cox$coefficients[,"Pr(>|z|)"], 3)
-    } else {
-      HR <- CI_lower <- CI_upper <- pval <- "—"
-    }
-    tcgaCH_cox_results <- rbind(tcgaCH_cox_results, data.frame(Stage=stage, LCA3class=lca, CH0=CH0_count, CH1=CH1_count, HR=HR, CI=paste(CI_lower, CI_upper, sep="-"), pval=pval))
-  }
-}
+      }   
 
-
+                            
+#data statistics
 for(i in c("Age_class","Pathology","Stage","Marry","Chemotherapy","Laterality","Primary_Site","T","N","M","RT")){
   print(table(seerCSSdata[,i],seerCSSdata$CSS))
 }
@@ -944,104 +825,3 @@ for(i in Tengene){# Tengene <- c("BAG1", "BCL2", "BIRC5", "CCNB1", "ERBB2", "ESR
 for(i in c("Age_class","Race","Stage","Pathology")){
   print(table(seerCSSdata[,i],seerCSSdata$LCA4class))
 }
-
-# The LCA3class survival curve
-
-# 分割数据集
-tcgadata_LCA3class1 <- subset(tcgadata, LCA3class == 1)
-tcgadata_LCA3class2 <- subset(tcgadata, LCA3class == 2)
-tcgadata_LCA3class3 <- subset(tcgadata, LCA3class == 3)
-
-# 定义颜色
-palette1 <- c("#039278", "#05AF90", "#69C6AD", "#AEDBCD")
-palette2 <- c("#467FB8", "#5598DC", "#84B4EE", "#B8D0F4")
-palette3 <- c("#C33B3B", "#E84747", "#F97D7D", "#FBB5B5")
-
-# the LCA3class survival curve
-# LCA3class = 1
-fit_LCA3class1 <- survfit(Surv(OS_time, OS_status) ~ LCA4class, data = tcgadata_LCA3class1)
-ggsurvplot(fit_LCA3class1, data = tcgadata_LCA3class1, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette1, title = "Survival curves for LCA4class with LCA3class = 1", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-# LCA3class = 2
-fit_LCA3class2 <- survfit(Surv(OS_time, OS_status) ~ LCA4class, data = tcgadata_LCA3class2)
-ggsurvplot(fit_LCA3class2, data = tcgadata_LCA3class2, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette2, title = "Survival curves for LCA4class with LCA3class = 2", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-# LCA3class = 3
-fit_LCA3class3 <- survfit(Surv(OS_time, OS_status) ~ LCA4class, data = tcgadata_LCA3class3)
-ggsurvplot(fit_LCA3class3, data = tcgadata_LCA3class3, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette3, title = "Survival curves for LCA4class with LCA3class = 3", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-
-
-# The LCA4class survival curve
-# split data
-tcgadata_LCA4class1 <- subset(tcgadata, LCA4class == 1)
-tcgadata_LCA4class2 <- subset(tcgadata, LCA4class == 2)
-tcgadata_LCA4class3 <- subset(tcgadata, LCA4class == 3)
-tcgadata_LCA4class4 <- subset(tcgadata, LCA4class == 4)
-
-# palette
-palette_LCA4class1 <- c("#039278", "#467FB8", "#C33B3B")
-palette_LCA4class2 <- c("#05AF90", "#5598DC", "#E84747")
-palette_LCA4class3 <- c("#69C6AD", "#84B4EE", "#F97D7D")
-palette_LCA4class4 <- c("#AEDBCD", "#B8D0F4", "#FBB5B5")
-
-# the survival curve
-# LCA4class = 1
-fit_LCA4class1 <- survfit(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class1)
-ggsurvplot(fit_LCA4class1, data = tcgadata_LCA4class1, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette_LCA4class1, title = "Survival curves for LCA3class with LCA4class = 1", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-# LCA4class = 2
-fit_LCA4class2 <- survfit(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class2)
-ggsurvplot(fit_LCA4class2, data = tcgadata_LCA4class2, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette_LCA4class2, title = "Survival curves for LCA3class with LCA4class = 2", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-# LCA4class = 3
-fit_LCA4class3 <- survfit(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class3)
-ggsurvplot(fit_LCA4class3, data = tcgadata_LCA4class3, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette_LCA4class3, title = "Survival curves for LCA3class with LCA4class = 3", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-# LCA4class = 4
-fit_LCA4class4 <- survfit(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class4)
-ggsurvplot(fit_LCA4class4, data = tcgadata_LCA4class4, pval = TRUE, risk.table = FALSE, conf.int = FALSE, 
-           palette = palette_LCA4class4, title = "Survival curves for LCA3class with LCA4class = 4", 
-           xlab = "Time", ylab = "Survival Probability", xlim = c(0, 1825), ylim = c(0, 1))
-
-# extract survival data
-extract_survival_data <- function(fit) {
-  summary_fit <- summary(fit)
-  data.frame(
-    Time = summary_fit$time,
-    SurvivalProbability = summary_fit$surv,
-    RiskNumber = summary_fit$n.risk,
-    EventsNumber = summary_fit$n.event,
-    ConfIntLower = summary_fit$lower,
-    ConfIntUpper = summary_fit$upper
-  )
-}
-
-# extract the information of models
-survival_data_LCA3class1 <- extract_survival_data(fit_LCA3class1)
-survival_data_LCA3class2 <- extract_survival_data(fit_LCA3class2)
-survival_data_LCA3class3 <- extract_survival_data(fit_LCA3class3)
-survival_data_LCA4class1 <- extract_survival_data(fit_LCA4class1)
-survival_data_LCA4class2 <- extract_survival_data(fit_LCA4class2)
-survival_data_LCA4class3 <- extract_survival_data(fit_LCA4class3)
-survival_data_LCA4class4 <- extract_survival_data(fit_LCA4class4)
-# logrank_test
-logrank_test3_1 <- survdiff(Surv(OS_time, OS_status) ~ LCA4class, data = tcgadata_LCA3class1)
-logrank_test3_2 <- survdiff(Surv(OS_time, OS_status) ~ LCA4class, data = tcgadata_LCA3class2)
-logrank_test3_3 <- survdiff(Surv(OS_time, OS_status) ~ LCA4class, data = tcgadata_LCA3class3)
-logrank_test4_1 <- survdiff(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class1)
-logrank_test4_2 <- survdiff(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class2)
-logrank_test4_3 <- survdiff(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class3)
-logrank_test4_4 <- survdiff(Surv(OS_time, OS_status) ~ LCA3class, data = tcgadata_LCA4class4)
